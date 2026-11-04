@@ -68,7 +68,6 @@ def test_add_list_get_delete(tmp_path: Path) -> None:
     assert pm.list_entries() == []
 
 
-@pytest.mark.xfail(reason="Encryption not implemented yet")
 def test_storage_does_not_contain_plaintext(tmp_path: Path) -> None:
     """Vault file must not contain passwords in plaintext (requires encryption)."""
     vault = tmp_path / "vault.json"

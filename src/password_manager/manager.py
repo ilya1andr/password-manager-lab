@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 from typing import Any, cast
 
+from cryptography.fernet import Fernet, InvalidToken
+
 
 class PasswordManager:
     """Manages password entries with master-password protection."""
@@ -25,9 +27,12 @@ class PasswordManager:
         salt = os.urandom(16)
         pwd_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
 
+        encryption_key = Fernet.generate_key()
+
         self._data = {
             "salt": salt.hex(),
             "master_hash": pwd_hash.hex(),
+            "encryption_key": encryption_key.decode("utf-8"),
             "entries": {},
         }
         self._persist()
@@ -40,15 +45,20 @@ class PasswordManager:
         actual = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
         if actual == expected:
             self._unlocked = True
+            self._key = cast(str, self._data["encryption_key"]).encode("utf-8")
             return True
         return False
 
     def add_entry(self, name: str, login: str, pwd: str) -> None:
         """Add a new entry. Requires unlocked state."""
-        if not self._unlocked:
+        if not self._unlocked or self._key is None:
             raise RuntimeError("Vault is locked. Unlock first.")
         self._load()
-        self._data["entries"][name] = {"login": login, "password": pwd}
+
+        f = Fernet(self._key)
+        encrypted_pwd = f.encrypt(pwd.encode("utf-8")).decode("utf-8")
+
+        self._data["entries"][name] = {"login": login, "password": encrypted_pwd}
         self._persist()
 
     def list_entries(self) -> list[str]:
@@ -60,13 +70,20 @@ class PasswordManager:
 
     def get_entry(self, name: str) -> tuple[str, str]:
         """Return (login, password) for entry. Requires unlocked state."""
-        if not self._unlocked:
+        if not self._unlocked or self._key is None:
             raise RuntimeError("Vault is locked. Unlock first.")
         self._load()
         entry = self._data["entries"].get(name)
         if entry is None:
             raise KeyError(f"Entry '{name}' not found")
-        return entry["login"], entry["password"]
+        f = Fernet(self._key)
+
+        try:
+            decrypted_pwd = f.decrypt(entry["password"].encode("utf-8")).decode("utf-8")
+        except InvalidToken as e:
+            raise RuntimeError("Failed to decrypt password. Data corrupted or wrong key.") from e
+
+        return entry["login"], decrypted_pwd
 
     def delete_entry(self, name: str) -> None:
         """Delete entry by name."""
