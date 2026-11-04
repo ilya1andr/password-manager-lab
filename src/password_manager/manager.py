@@ -15,6 +15,7 @@ class PasswordManager:
         self.storage_path = Path(storage_path)
         self._data: dict[str, Any] = {}
         self._key: bytes | None = None
+        self._unlocked: bool = False
 
     def init_master(self, password: str) -> None:
         """Create master password hash and salt. Fails if already initialized."""
@@ -37,23 +38,45 @@ class PasswordManager:
         salt = bytes.fromhex(cast(str, self._data["salt"]))
         expected = bytes.fromhex(cast(str, self._data["master_hash"]))
         actual = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
-        return actual == expected
+        if actual == expected:
+            self._unlocked = True
+            return True
+        return False
 
-    def add_entry(self, name: str, login: str, pwd: str) -> None:  # noqa: ARG002
+    def add_entry(self, name: str, login: str, pwd: str) -> None:
         """Add a new entry. Requires unlocked state."""
-        ...
+        if not self._unlocked:
+            raise RuntimeError("Vault is locked. Unlock first.")
+        self._load()
+        self._data["entries"][name] = {"login": login, "password": pwd}
+        self._persist()
 
     def list_entries(self) -> list[str]:
         """Return list of entry names (without passwords)."""
-        return []
+        if not self._unlocked:
+            raise RuntimeError("Vault is locked. Unlock first.")
+        self._load()
+        return list(self._data.get("entries", {}).keys())
 
-    def get_entry(self, name: str) -> tuple[str, str]:  # noqa: ARG002
+    def get_entry(self, name: str) -> tuple[str, str]:
         """Return (login, password) for entry. Requires unlocked state."""
-        return ("", "")
+        if not self._unlocked:
+            raise RuntimeError("Vault is locked. Unlock first.")
+        self._load()
+        entry = self._data["entries"].get(name)
+        if entry is None:
+            raise KeyError(f"Entry '{name}' not found")
+        return entry["login"], entry["password"]
 
-    def delete_entry(self, name: str) -> None:  # noqa: ARG002
+    def delete_entry(self, name: str) -> None:
         """Delete entry by name."""
-        ...
+        if not self._unlocked:
+            raise RuntimeError("Vault is locked. Unlock first.")
+        self._load()
+        if name not in self._data.get("entries", {}):
+            raise KeyError(f"Entry '{name}' not found")
+        del self._data["entries"][name]
+        self._persist()
 
     def _load(self) -> None:
         """Read JSON file into self._data."""
