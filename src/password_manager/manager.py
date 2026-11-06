@@ -3,6 +3,8 @@
 import hashlib
 import json
 import os
+import secrets
+import string
 from pathlib import Path
 from typing import Any, cast
 
@@ -94,6 +96,11 @@ class PasswordManager:
             raise KeyError(f"Entry '{name}' not found")
         del self._data["entries"][name]
         self._persist()
+
+    def generate_password(self, length: int = 16) -> str:
+        """Generate a strong random password."""
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        return "".join(secrets.choice(alphabet) for _ in range(length))
 
     def _load(self) -> None:
         """Read JSON file into self._data."""

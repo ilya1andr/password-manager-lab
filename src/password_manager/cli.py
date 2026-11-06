@@ -75,7 +75,8 @@ def main() -> None:
             print("Ошибка: хранилище не найдено. Сначала выполните --init.")
 
     elif args.generate:
-        print("Генерация пароля...")
+        pwd = pm.generate_password()
+        print(f"Сгенерированный пароль: {pwd}")
 
 
 def interactive_menu(pm: PasswordManager) -> None:
@@ -142,7 +143,7 @@ def interactive_menu(pm: PasswordManager) -> None:
                 print(f"Ошибка: {e}")
 
         elif cmd == "generate":
-            print("Генерация пароля (будет реализовано).")
+            print(f"Новый пароль: {pm.generate_password()}")
 
         else:
             print("Неизвестная команда. Доступно: add, list, get <имя>, "
