@@ -30,7 +30,7 @@ class PasswordManager:
             raise RuntimeError("Vault already initialized. Use --unlock.")
 
         salt = os.urandom(16)
-        pwd_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+        pwd_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 600_000)
 
 
         self._data = {
@@ -45,7 +45,7 @@ class PasswordManager:
         self._load()
         salt = bytes.fromhex(cast(str, self._data["salt"]))
         expected = bytes.fromhex(cast(str, self._data["master_hash"]))
-        actual = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+        actual = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 600_000)
         if actual == expected:
             self._unlocked = True
             kdf = PBKDF2HMAC(
