@@ -1,6 +1,5 @@
 {
-  "salt": "fb0176b74ca2248338384821c9ee65e6",
-  "master_hash": "4b12a36a16c7294e7b8a0ca8114e80638db11e03a8239abbd89fc0975ae3ae20",
-  "encryption_key": "AN2OHFmJ9b3Mhu1cJYnPNSeNr_Pxg_tQNMO7RhRKXQM=",
+  "salt": "0a38f92bb1f9d8b28070f2ffae998a94",
+  "master_hash": "5c63d7248d7207b6d4740f507dfb8e8ebbbe09e33a157bff15b5bb934bebd4fd",
   "entries": {}
 }

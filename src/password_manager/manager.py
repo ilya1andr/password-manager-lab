@@ -1,5 +1,6 @@
 """Password manager core logic."""
 
+import base64
 import hashlib
 import json
 import os
@@ -9,6 +10,8 @@ from pathlib import Path
 from typing import Any, cast
 
 from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 
 class PasswordManager:
@@ -29,12 +32,10 @@ class PasswordManager:
         salt = os.urandom(16)
         pwd_hash = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
 
-        encryption_key = Fernet.generate_key()
 
         self._data = {
             "salt": salt.hex(),
             "master_hash": pwd_hash.hex(),
-            "encryption_key": encryption_key.decode("utf-8"),
             "entries": {},
         }
         self._persist()
@@ -47,7 +48,13 @@ class PasswordManager:
         actual = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
         if actual == expected:
             self._unlocked = True
-            self._key = cast(str, self._data["encryption_key"]).encode("utf-8")
+            kdf = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=salt,
+                iterations=600_000,
+            )
+            self._key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
             return True
         return False
 
